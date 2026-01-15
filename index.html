@@ -233,6 +233,70 @@
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
 
+        // Audio context (created on first user interaction)
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playHammerSound() {
+            if (!audioCtx) return;
+
+            // Create oscillator for metallic ring
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            // Metallic frequency
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+            osc.type = 'square';
+
+            // Bandpass filter for metallic tone
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            filter.Q.setValueAtTime(5, audioCtx.currentTime);
+
+            // Quick decay envelope
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+            // Connect nodes
+            osc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Play
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.15);
+
+            // Add a noise burst for impact
+            const bufferSize = audioCtx.sampleRate * 0.05;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+            }
+
+            const noise = audioCtx.createBufferSource();
+            const noiseGain = audioCtx.createGain();
+            const noiseFilter = audioCtx.createBiquadFilter();
+
+            noise.buffer = buffer;
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.setValueAtTime(2000, audioCtx.currentTime);
+            noiseGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            noise.start(audioCtx.currentTime);
+        }
+
         // Game state
         let gameState = 'start'; // start, playing, won, lost
         let health = 100;
@@ -382,6 +446,7 @@
                         forgeClickCooldown = 5;
                         hammerY = 10;
                         createSparks();
+                        playHammerSound();
                         masterState = 'forging';
 
                         if (forgeProgress >= 100) {
@@ -754,6 +819,7 @@
 
         // Start button
         document.getElementById('startBtn').addEventListener('click', () => {
+            initAudio();
             document.getElementById('startScreen').style.display = 'none';
             gameState = 'playing';
             lastSpawnTime = Date.now();
