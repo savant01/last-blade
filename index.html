@@ -242,6 +242,53 @@
             }
         }
 
+        function playDefeatSound() {
+            if (!audioCtx) return;
+
+            // Descending somber notes
+            const notes = [392.00, 349.23, 293.66, 196.00]; // G4, F4, D4, G3
+            const noteDuration = 0.25;
+
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteDuration);
+                osc.type = 'sine';
+
+                const startTime = audioCtx.currentTime + i * noteDuration;
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.03);
+                gainNode.gain.setValueAtTime(0.2, startTime + noteDuration - 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + noteDuration + 0.15);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + noteDuration + 0.15);
+            });
+
+            // Final low drone
+            const droneTime = audioCtx.currentTime + notes.length * noteDuration;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.frequency.setValueAtTime(98, droneTime); // G2
+            osc.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0, droneTime);
+            gainNode.gain.linearRampToValueAtTime(0.25, droneTime + 0.1);
+            gainNode.gain.setValueAtTime(0.25, droneTime + 0.5);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, droneTime + 1.5);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(droneTime);
+            osc.stop(droneTime + 1.5);
+        }
+
         function playVictorySound() {
             if (!audioCtx) return;
 
@@ -675,6 +722,7 @@
                         if (health <= 0) {
                             health = 0;
                             gameState = 'lost';
+                            playDefeatSound();
                             showEndScreen(false);
                         }
                     }
