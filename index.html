@@ -242,6 +242,56 @@
             }
         }
 
+        function playNinjaDefeatedSound() {
+            if (!audioCtx) return;
+
+            // Slash swoosh sound
+            const swooshDuration = 0.12;
+            const bufferSize = audioCtx.sampleRate * swooshDuration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                const t = i / bufferSize;
+                // Swoosh: filtered noise with pitch sweep
+                data[i] = (Math.random() * 2 - 1) * Math.sin(t * Math.PI) * 0.6;
+            }
+
+            const swoosh = audioCtx.createBufferSource();
+            const swooshFilter = audioCtx.createBiquadFilter();
+            const swooshGain = audioCtx.createGain();
+
+            swoosh.buffer = buffer;
+            swooshFilter.type = 'bandpass';
+            swooshFilter.frequency.setValueAtTime(3000, audioCtx.currentTime);
+            swooshFilter.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + swooshDuration);
+            swooshFilter.Q.setValueAtTime(2, audioCtx.currentTime);
+
+            swooshGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+            swoosh.connect(swooshFilter);
+            swooshFilter.connect(swooshGain);
+            swooshGain.connect(audioCtx.destination);
+            swoosh.start(audioCtx.currentTime);
+
+            // Impact thud
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+            osc.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
         function playHammerSound() {
             if (!audioCtx) return;
 
@@ -430,6 +480,7 @@
                         createParticles(ninja.x + ninja.width/2, ninja.y + ninja.height/2, COLORS.blood, 15);
                         ninjas.splice(i, 1);
                         ninjasDefeated++;
+                        playNinjaDefeatedSound();
                     }
                     hitNinja = true;
                     break;
