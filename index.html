@@ -242,6 +242,57 @@
             }
         }
 
+        function playVictorySound() {
+            if (!audioCtx) return;
+
+            // Triumphant ascending notes
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            const noteDuration = 0.15;
+
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteDuration);
+                osc.type = 'triangle';
+
+                const startTime = audioCtx.currentTime + i * noteDuration;
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(0.25, startTime + 0.02);
+                gainNode.gain.setValueAtTime(0.25, startTime + noteDuration - 0.05);
+                gainNode.gain.linearRampToValueAtTime(0.01, startTime + noteDuration + 0.2);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + noteDuration + 0.2);
+            });
+
+            // Final chord
+            const chordTime = audioCtx.currentTime + notes.length * noteDuration;
+            const chordFreqs = [523.25, 659.25, 783.99]; // C major chord
+
+            chordFreqs.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.frequency.setValueAtTime(freq, chordTime);
+                osc.type = 'triangle';
+
+                gainNode.gain.setValueAtTime(0, chordTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, chordTime + 0.05);
+                gainNode.gain.setValueAtTime(0.2, chordTime + 0.3);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, chordTime + 1.0);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start(chordTime);
+                osc.stop(chordTime + 1.0);
+            });
+        }
+
         function playPlayerHitSound() {
             if (!audioCtx) return;
 
@@ -548,6 +599,7 @@
 
                         if (forgeProgress >= 100) {
                             gameState = 'won';
+                            playVictorySound();
                             showEndScreen(true);
                         }
                     }
