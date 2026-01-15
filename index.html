@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>The Last Blade</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            border: 4px solid #4a4a6a;
+            border-radius: 4px;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .bar-container {
+            width: 45%;
+        }
+
+        .bar-label {
+            color: #fff;
+            font-size: 12px;
+            margin-bottom: 4px;
+            text-shadow: 2px 2px #000;
+        }
+
+        .bar {
+            height: 20px;
+            background: #2a2a4a;
+            border: 2px solid #4a4a6a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.1s;
+        }
+
+        #healthFill {
+            background: linear-gradient(to bottom, #ff6b6b, #c0392b);
+        }
+
+        #forgeFill {
+            background: linear-gradient(to bottom, #f39c12, #d35400);
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 24px;
+            text-align: center;
+            text-shadow: 3px 3px #000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #startScreen, #endScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #endScreen {
+            display: none;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #f39c12;
+            text-shadow: 3px 3px #000;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .story {
+            font-size: 14px;
+            color: #ccc;
+            max-width: 400px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .instructions {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #c0392b;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #e74c3c;
+        }
+
+        #endTitle {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        #endMessage {
+            font-size: 16px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        #finalScore {
+            font-size: 14px;
+            color: #f39c12;
+            margin-bottom: 30px;
+        }
+
+        #waveIndicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="game" width="800" height="500"></canvas>
+
+        <div id="ui">
+            <div class="bar-container">
+                <div class="bar-label">❤️ HEALTH</div>
+                <div class="bar">
+                    <div id="healthFill" class="bar-fill" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-label">⚔️ BLADE PROGRESS</div>
+                <div class="bar">
+                    <div id="forgeFill" class="bar-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="waveIndicator">Wave 1</div>
+
+        <div id="message"></div>
+
+        <div id="startScreen">
+            <h1>⚔️ THE LAST BLADE ⚔️</h1>
+            <div class="subtitle">鍛冶屋の最後の戦い</div>
+            <div class="story">
+                Master Takeshi, the greatest swordsmith in Japan, must forge the legendary Dragon Slayer blade.
+                <br><br>
+                But the dragon has sent endless waves of ninja assassins to stop him.
+                <br><br>
+                Forge when you can. Fight when you must. Complete the blade before they overwhelm you.
+            </div>
+            <div class="instructions">
+                🔨 CLICK THE ANVIL to forge<br>
+                ⚔️ CLICK NINJAS to strike them down
+            </div>
+            <button id="startBtn">Begin Forging</button>
+        </div>
+
+        <div id="endScreen">
+            <div id="endTitle"></div>
+            <div id="endMessage"></div>
+            <div id="finalScore"></div>
+            <button id="restartBtn">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let gameState = 'start'; // start, playing, won, lost
+        let health = 100;
+        let forgeProgress = 0;
+        let ninjas = [];
+        let particles = [];
+        let sparks = [];
+        let wave = 1;
+        let ninjasDefeated = 0;
+        let lastSpawnTime = 0;
+        let forgeClickCooldown = 0;
+        let masterState = 'forging'; // forging, fighting
+        let masterAttackTime = 0;
+        let hammerY = 0;
+        let screenShake = 0;
+
+        // Constants
+        const FORGE_PER_CLICK = 0.8;
+        const NINJA_DAMAGE = 15;
+        const NINJA_SPEED_BASE = 1.5;
+        const SPAWN_INTERVAL_BASE = 2000;
+
+        // Master swordsmith position
+        const master = {
+            x: 580,
+            y: 320,
+            width: 60,
+            height: 80
+        };
+
+        // Anvil position
+        const anvil = {
+            x: 520,
+            y: 380,
+            width: 100,
+            height: 50
+        };
+
+        // Forge area (clickable)
+        const forgeArea = {
+            x: 480,
+            y: 300,
+            width: 180,
+            height: 150
+        };
+
+        // Colors
+        const COLORS = {
+            bg: '#2d1b2e',
+            ground: '#1a1a2e',
+            master: '#e8d4b8',
+            masterClothes: '#2c3e50',
+            ninja: '#1a1a1a',
+            ninjaRed: '#c0392b',
+            anvil: '#4a4a4a',
+            fire: '#f39c12',
+            spark: '#fff',
+            blood: '#8b0000'
+        };
+
+        // Spawn a ninja
+        function spawnNinja() {
+            const fromLeft = Math.random() > 0.3;
+            const ninja = {
+                x: fromLeft ? -40 : canvas.width + 40,
+                y: 340 + Math.random() * 40,
+                width: 40,
+                height: 60,
+                speed: NINJA_SPEED_BASE + (wave * 0.3) + Math.random() * 0.5,
+                health: 1,
+                direction: fromLeft ? 1 : -1,
+                attackCooldown: 0,
+                hitFlash: 0
+            };
+            ninjas.push(ninja);
+        }
+
+        // Create particles
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8 - 2,
+                    life: 30 + Math.random() * 20,
+                    color: color,
+                    size: 2 + Math.random() * 4
+                });
+            }
+        }
+
+        // Create forge sparks
+        function createSparks() {
+            for (let i = 0; i < 8; i++) {
+                sparks.push({
+                    x: anvil.x + anvil.width / 2,
+                    y: anvil.y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: -Math.random() * 8 - 2,
+                    life: 20 + Math.random() * 15,
+                    color: Math.random() > 0.5 ? '#f39c12' : '#fff'
+                });
+            }
+        }
+
+        // Handle click
+        function handleClick(e) {
+            if (gameState !== 'playing') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            // Check ninja clicks first
+            let hitNinja = false;
+            for (let i = ninjas.length - 1; i >= 0; i--) {
+                const ninja = ninjas[i];
+                if (x > ninja.x && x < ninja.x + ninja.width &&
+                    y > ninja.y - 20 && y < ninja.y + ninja.height) {
+                    // Hit ninja
+                    ninja.health--;
+                    ninja.hitFlash = 10;
+                    masterState = 'fighting';
+                    masterAttackTime = 15;
+                    screenShake = 5;
+
+                    if (ninja.health <= 0) {
+                        createParticles(ninja.x + ninja.width/2, ninja.y + ninja.height/2, COLORS.blood, 15);
+                        ninjas.splice(i, 1);
+                        ninjasDefeated++;
+                    }
+                    hitNinja = true;
+                    break;
+                }
+            }
+
+            // If no ninja hit, check forge area
+            if (!hitNinja && forgeClickCooldown <= 0) {
+                if (x > forgeArea.x && x < forgeArea.x + forgeArea.width &&
+                    y > forgeArea.y && y < forgeArea.y + forgeArea.height) {
+                    // Forge!
+                    if (ninjas.length === 0 || getNearestNinjaDistance() > 150) {
+                        forgeProgress = Math.min(100, forgeProgress + FORGE_PER_CLICK);
+                        forgeClickCooldown = 5;
+                        hammerY = 10;
+                        createSparks();
+                        masterState = 'forging';
+
+                        if (forgeProgress >= 100) {
+                            gameState = 'won';
+                            showEndScreen(true);
+                        }
+                    }
+                }
+            }
+        }
+
+        function getNearestNinjaDistance() {
+            let nearest = Infinity;
+            for (const ninja of ninjas) {
+                const dist = Math.abs(ninja.x - master.x);
+                if (dist < nearest) nearest = dist;
+            }
+            return nearest;
+        }
+
+        // Touch support
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+
+        // Update game
+        function update() {
+            if (gameState !== 'playing') return;
+
+            // Update cooldowns
+            if (forgeClickCooldown > 0) forgeClickCooldown--;
+            if (masterAttackTime > 0) masterAttackTime--;
+            if (screenShake > 0) screenShake--;
+
+            // Hammer animation
+            if (hammerY > 0) hammerY -= 2;
+
+            // Reset master state
+            if (masterAttackTime <= 0 && ninjas.length === 0) {
+                masterState = 'forging';
+            }
+
+            // Spawn ninjas
+            const now = Date.now();
+            const spawnInterval = Math.max(800, SPAWN_INTERVAL_BASE - wave * 150);
+            if (now - lastSpawnTime > spawnInterval) {
+                spawnNinja();
+                lastSpawnTime = now;
+
+                // Increase wave
+                if (ninjasDefeated > 0 && ninjasDefeated % 8 === 0) {
+                    wave = Math.min(10, Math.floor(ninjasDefeated / 8) + 1);
+                }
+            }
+
+            // Update ninjas
+            for (let i = ninjas.length - 1; i >= 0; i--) {
+                const ninja = ninjas[i];
+
+                // Move toward master
+                if (ninja.x < master.x - 80) {
+                    ninja.x += ninja.speed;
+                } else if (ninja.x > master.x + 40) {
+                    ninja.x -= ninja.speed;
+                } else {
+                    // Attack!
+                    if (ninja.attackCooldown <= 0) {
+                        health -= NINJA_DAMAGE;
+                        screenShake = 8;
+                        ninja.attackCooldown = 60;
+                        createParticles(master.x + master.width/2, master.y + master.height/2, '#ff6b6b', 8);
+
+                        if (health <= 0) {
+                            health = 0;
+                            gameState = 'lost';
+                            showEndScreen(false);
+                        }
+                    }
+                }
+
+                if (ninja.attackCooldown > 0) ninja.attackCooldown--;
+                if (ninja.hitFlash > 0) ninja.hitFlash--;
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Update sparks
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const s = sparks[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.vy += 0.2;
+                s.life--;
+                if (s.life <= 0) sparks.splice(i, 1);
+            }
+
+            // Update UI
+            document.getElementById('healthFill').style.width = health + '%';
+            document.getElementById('forgeFill').style.width = forgeProgress + '%';
+            document.getElementById('waveIndicator').textContent = `Wave ${wave} | Ninjas Defeated: ${ninjasDefeated}`;
+        }
+
+        // Draw game
+        function draw() {
+            // Screen shake
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * screenShake * 2,
+                    (Math.random() - 0.5) * screenShake * 2
+                );
+            }
+
+            // Background
+            ctx.fillStyle = '#1a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Mountains in background
+            ctx.fillStyle = '#2d1b2e';
+            ctx.beginPath();
+            ctx.moveTo(0, 300);
+            ctx.lineTo(150, 150);
+            ctx.lineTo(300, 280);
+            ctx.lineTo(450, 120);
+            ctx.lineTo(600, 250);
+            ctx.lineTo(750, 100);
+            ctx.lineTo(800, 200);
+            ctx.lineTo(800, 500);
+            ctx.lineTo(0, 500);
+            ctx.fill();
+
+            // Moon
+            ctx.fillStyle = '#f5f5dc';
+            ctx.beginPath();
+            ctx.arc(650, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ground
+            ctx.fillStyle = '#2a1a2a';
+            ctx.fillRect(0, 400, canvas.width, 100);
+
+            // Forge fire glow
+            const gradient = ctx.createRadialGradient(anvil.x + 50, anvil.y + 20, 0, anvil.x + 50, anvil.y + 20, 100);
+            gradient.addColorStop(0, 'rgba(243, 156, 18, 0.3)');
+            gradient.addColorStop(1, 'rgba(243, 156, 18, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(anvil.x - 50, anvil.y - 80, 200, 200);
+
+            // Draw workshop structure
+            ctx.fillStyle = '#3d2b3d';
+            ctx.fillRect(460, 200, 200, 200);
+            ctx.fillStyle = '#2d1b2d';
+            ctx.beginPath();
+            ctx.moveTo(440, 200);
+            ctx.lineTo(560, 120);
+            ctx.lineTo(680, 200);
+            ctx.fill();
+
+            // Anvil
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(anvil.x, anvil.y, anvil.width, anvil.height);
+            ctx.fillStyle = '#5a5a5a';
+            ctx.fillRect(anvil.x + 10, anvil.y - 10, anvil.width - 20, 15);
+
+            // Sword being forged (shows progress)
+            const swordLength = 60 * (forgeProgress / 100);
+            if (swordLength > 0) {
+                ctx.fillStyle = forgeProgress < 100 ? '#ff6600' : '#silver';
+                ctx.fillRect(anvil.x + 45, anvil.y - 8, swordLength, 8);
+                // Glow
+                ctx.shadowColor = '#ff6600';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(anvil.x + 45, anvil.y - 8, swordLength, 8);
+                ctx.shadowBlur = 0;
+            }
+
+            // Fire under anvil
+            for (let i = 0; i < 5; i++) {
+                const flicker = Math.sin(Date.now() / 100 + i) * 5;
+                ctx.fillStyle = i % 2 === 0 ? '#f39c12' : '#e74c3c';
+                ctx.beginPath();
+                ctx.moveTo(anvil.x + 20 + i * 15, anvil.y + anvil.height);
+                ctx.lineTo(anvil.x + 30 + i * 15, anvil.y + anvil.height - 20 - flicker);
+                ctx.lineTo(anvil.x + 40 + i * 15, anvil.y + anvil.height);
+                ctx.fill();
+            }
+
+            // Draw master swordsmith
+            drawMaster();
+
+            // Draw ninjas
+            for (const ninja of ninjas) {
+                drawNinja(ninja);
+            }
+
+            // Draw particles
+            for (const p of particles) {
+                ctx.globalAlpha = p.life / 50;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            }
+            ctx.globalAlpha = 1;
+
+            // Draw sparks
+            for (const s of sparks) {
+                ctx.globalAlpha = s.life / 35;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+        function drawMaster() {
+            const x = master.x;
+            const y = master.y;
+
+            // Body
+            ctx.fillStyle = '#4a3728';
+            ctx.fillRect(x + 15, y + 25, 30, 45);
+
+            // Robe
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.moveTo(x + 10, y + 30);
+            ctx.lineTo(x + 50, y + 30);
+            ctx.lineTo(x + 55, y + 70);
+            ctx.lineTo(x + 5, y + 70);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = '#e8d4b8';
+            ctx.beginPath();
+            ctx.arc(x + 30, y + 15, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair/topknot
+            ctx.fillStyle = '#2c2c2c';
+            ctx.beginPath();
+            ctx.arc(x + 30, y + 8, 10, Math.PI, 0);
+            ctx.fill();
+            ctx.fillRect(x + 27, y - 5, 6, 12);
+
+            // Arm with hammer
+            if (masterState === 'forging') {
+                ctx.fillStyle = '#e8d4b8';
+                ctx.fillRect(x - 5, y + 30 - hammerY, 15, 8);
+
+                // Hammer
+                ctx.fillStyle = '#5a5a5a';
+                ctx.fillRect(x - 15, y + 25 - hammerY, 12, 20);
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(x - 10, y + 40 - hammerY, 6, 25);
+            } else {
+                // Fighting stance - arm with sword
+                ctx.fillStyle = '#e8d4b8';
+                ctx.save();
+                ctx.translate(x, y + 35);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillRect(0, 0, 35, 8);
+
+                // Katana
+                ctx.fillStyle = '#c0c0c0';
+                ctx.fillRect(35, 2, 50, 4);
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(30, 0, 8, 8);
+                ctx.restore();
+            }
+        }
+
+        function drawNinja(ninja) {
+            const x = ninja.x;
+            const y = ninja.y;
+            const flash = ninja.hitFlash > 0;
+
+            // Body
+            ctx.fillStyle = flash ? '#fff' : '#1a1a1a';
+            ctx.fillRect(x + 10, y + 20, 20, 35);
+
+            // Head
+            ctx.fillStyle = flash ? '#fff' : '#1a1a1a';
+            ctx.beginPath();
+            ctx.arc(x + 20, y + 12, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes (red headband)
+            ctx.fillStyle = flash ? '#fff' : '#c0392b';
+            ctx.fillRect(x + 8, y + 8, 24, 6);
+
+            // Eyes
+            if (!flash) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x + 14, y + 10, 4, 3);
+                ctx.fillRect(x + 22, y + 10, 4, 3);
+            }
+
+            // Arm with weapon
+            ctx.fillStyle = flash ? '#fff' : '#1a1a1a';
+            if (ninja.direction > 0) {
+                ctx.fillRect(x + 25, y + 25, 20, 6);
+                // Sword
+                ctx.fillStyle = flash ? '#fff' : '#666';
+                ctx.fillRect(x + 40, y + 24, 25, 3);
+            } else {
+                ctx.fillRect(x - 5, y + 25, 20, 6);
+                ctx.fillStyle = flash ? '#fff' : '#666';
+                ctx.fillRect(x - 25, y + 24, 25, 3);
+            }
+
+            // Legs
+            ctx.fillStyle = flash ? '#fff' : '#1a1a1a';
+            ctx.fillRect(x + 10, y + 50, 8, 15);
+            ctx.fillRect(x + 22, y + 50, 8, 15);
+        }
+
+        function showEndScreen(won) {
+            const endScreen = document.getElementById('endScreen');
+            const endTitle = document.getElementById('endTitle');
+            const endMessage = document.getElementById('endMessage');
+            const finalScore = document.getElementById('finalScore');
+
+            if (won) {
+                endTitle.innerHTML = '⚔️ VICTORY ⚔️';
+                endTitle.style.color = '#f39c12';
+                endMessage.textContent = 'The Dragon Slayer is complete. The dragon awaits its fate.';
+            } else {
+                endTitle.innerHTML = '💀 DEFEATED 💀';
+                endTitle.style.color = '#c0392b';
+                endMessage.textContent = 'The ninjas have overwhelmed Master Takeshi. The dragon lives on.';
+            }
+
+            finalScore.textContent = `Waves Survived: ${wave} | Ninjas Defeated: ${ninjasDefeated} | Blade Progress: ${Math.floor(forgeProgress)}%`;
+            endScreen.style.display = 'flex';
+        }
+
+        function resetGame() {
+            health = 100;
+            forgeProgress = 0;
+            ninjas = [];
+            particles = [];
+            sparks = [];
+            wave = 1;
+            ninjasDefeated = 0;
+            lastSpawnTime = Date.now();
+            masterState = 'forging';
+            document.getElementById('healthFill').style.width = '100%';
+            document.getElementById('forgeFill').style.width = '0%';
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start button
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            gameState = 'playing';
+            lastSpawnTime = Date.now();
+        });
+
+        // Restart button
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('endScreen').style.display = 'none';
+            resetGame();
+            gameState = 'playing';
+        });
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
